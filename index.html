@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>남</title>
+  <style>
+    :root {
+      --bg: #111;
+      --fg: #f5f5f5;
+      --global-scale: 0.49;
+      --stack-gap: 0px;
+      --overview-scale: 0.23;
+
+      --camera-anchor-x: 0.72;
+      --start-offset-x: 18vw;
+      --bg-opacity: 1;
+
+      --scatter-screen-x-min: 0.08;
+      --scatter-screen-x-max: 0.92;
+      --scatter-screen-y-min: 0.12;
+      --scatter-screen-y-max: 0.82;
+
+      --english-text-color: rgb(0, 0, 0);
+      --english-offset-y: 0.55em;
+      --english-letter-spacing: 0.5em;
+      --english-bg-rgb: #f5f5f5;
+      --english-bg-opacity: 0.35;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--bg);
+      color: var(--fg);
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      cursor: text;
+    }
+
+    .viewport {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: auto hidden;
+      scroll-behavior: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .viewport::-webkit-scrollbar {
+      display: none;
+    }
+
+    .world {
+      position: relative;
+      min-width: 100vw;
+      height: 100vh;
+      overflow: visible;
+    }
+
+    .bg-pattern {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .bg-panel {
+      position: absolute;
+      top: 0;
+      width: 100vw;
+      height: 100vh;
+      background-repeat: no-repeat;
+      background-position: center center;
+      background-size: cover;
+      opacity: var(--bg-opacity);
+    }
+
+    .stack {
+      position: absolute;
+      left: var(--start-offset-x);
+      bottom: 3vh;
+      display: flex;
+      flex-direction: row;
+      align-items: flex-end;
+      gap: var(--stack-gap);
+      padding: 0 20vw 0 20vw;
+      z-index: 1;
+      transform-origin: left bottom;
+      transition: transform 260ms ease;
+      will-change: transform;
+      overflow: visible;
+    }
+
+    body.overview-mode .stack {
+      transform: scale(var(--overview-scale));
+    }
+
+    .tile {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      flex: 0 0 auto;
+      pointer-events: none;
+      transform-origin: center bottom;
+      animation: pop 180ms ease-out;
+      will-change: transform, opacity;
+      line-height: 0;
+      position: relative;
+      z-index: 2;
+      contain: layout style;
+      overflow: visible;
+    }
+
+    .tile img {
+      display: block;
+      width: auto;
+      height: auto;
+      max-width: none;
+      max-height: none;
+      user-select: none;
+      -webkit-user-drag: none;
+      transform-origin: center bottom;
+      image-rendering: auto;
+      overflow: visible;
+    }
+
+    .tile.scatter {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: auto;
+      z-index: 3;
+      overflow: visible;
+    }
+
+    .fallback {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 84px;
+      min-height: 84px;
+      padding: 14px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.04);
+      font-size: clamp(28px, 7vw, 70px);
+      border-radius: 16px;
+      line-height: 1;
+    }
+
+    .typed-overlay {
+      position: fixed;
+      top: 24px;
+      left: 24px;
+      right: 24px;
+      pointer-events: none;
+    }
+
+    #typedOverlayEnglish {
+      z-index: 20;
+    }
+
+    #typedOverlay {
+      z-index: 10;
+    }
+
+    .typed-line {
+      display: inline-block;
+      max-width: 100%;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: keep-all;
+      line-height: 1.1;
+      font-family: Arial, sans-serif;
+      font-size: 10px;
+      min-height: 1em;
+      vertical-align: top;
+    }
+
+    .typed-text {
+      display: inline;
+      background: rgb(255, 255, 255);
+      color: rgb(0, 163, 232);
+      padding: 1px 1px;
+      letter-spacing: -0.02em;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: keep-all;
+      box-decoration-break: clone;
+      -webkit-box-decoration-break: clone;
+    }
+
+    #typedText {
+      position: relative;
+      z-index: 10;
+    }
+
+    #typedTextEnglishWrap {
+      position: relative;
+      z-index: 20;
+      display: block;
+      text-align: right;
+      transform: translateY(var(--english-offset-y));
+    }
+
+    #typedTextEnglish {
+      position: relative;
+      z-index: 20;
+      color: var(--english-text-color);
+      letter-spacing: var(--english-letter-spacing);
+      background-color: rgba(#f5f5f5, var(--english-bg-opacity));
+    }
+
+    .hidden-input {
+      position: fixed;
+      left: -9999px;
+      top: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    @keyframes pop {
+      from {
+        opacity: 0;
+        transform: translateX(14px) scale(0.985);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+      }
+    }
+
+    .tile img.elastic-enter {
+      transform-origin: center bottom;
+      animation: elastic-rubber 760ms cubic-bezier(0.2, 0.95, 0.25, 1) both;
+      will-change: transform;
+      overflow: visible;
+    }
+
+    @keyframes elastic-rubber {
+      0% {
+        transform:
+          rotate(var(--tilt, 0deg))
+          scale(var(--stretch-x, 1), var(--stretch-y, 1));
+      }
+      18% {
+        transform:
+          rotate(calc(var(--tilt, 0deg) * -0.72))
+          scale(
+            calc(1 - (var(--stretch-x, 1) - 1) * 0.78),
+            calc(1 + (1 - var(--stretch-y, 1)) * 0.70)
+          );
+      }
+      42% {
+        transform:
+          rotate(calc(var(--tilt, 0deg) * 0.34))
+          scale(
+            calc(1 + (var(--stretch-x, 1) - 1) * 0.36),
+            calc(1 - (1 - var(--stretch-y, 1)) * 0.24)
+          );
+      }
+      68% {
+        transform:
+          rotate(calc(var(--tilt, 0deg) * -0.14))
+          scale(
+            calc(1 - (var(--stretch-x, 1) - 1) * 0.12),
+            calc(1 + (1 - var(--stretch-y, 1)) * 0.08)
+          );
+      }
+      100% {
+        transform: rotate(var(--rest-tilt, 0deg)) scale(1, 1);
+      }
+    }
+  </style>
+</head>
+<body>
+  <input
+    id="imeInput"
+    class="hidden-input"
+    type="text"
+    autocomplete="off"
+    autocorrect="off"
+    autocapitalize="off"
+    spellcheck="false"
+  />
+
+  <div id="typedOverlayEnglish" class="typed-overlay">
+    <div id="typedTextEnglishWrap">
+      <span id="typedTextEnglishLine" class="typed-line">
+        <span id="typedTextEnglish" class="typed-text"></span>
+      </span>
+    </div>
+  </div>
+
+  <div id="typedOverlay" class="typed-overlay">
+    <span id="typedTextLine" class="typed-line">
+      <span id="typedText" class="typed-text"></span>
+    </span>
+  </div>
+
+  <div id="viewport" class="viewport">
+    <div id="world" class="world">
+      <div id="bgPattern" class="bg-pattern"></div>
+      <div id="stack" class="stack"></div>
+    </div>
+  </div>
+
+  <script>
+    const viewport = document.getElementById("viewport");
+    const world = document.getElementById("world");
+    const stack = document.getElementById("stack");
+    const imeInput = document.getElementById("imeInput");
+    const bgPattern = document.getElementById("bgPattern");
+    const typedText = document.getElementById("typedText");
+    const typedTextEnglish = document.getElementById("typedTextEnglish");
+
+    const backgroundImages = [
+      "./images/background-1.png",
+      "./images/background-2.png",
+      "./images/background-3.png",
+      "./images/background-4.png",
+      "./images/background-5.png",
+      "./images/background-6.png",
+      "./images/background-7.png",
+      "./images/background-8.png",
+      "./images/background-9.png",
+      "./images/background-10.png",
+      "./images/background-11.png",
+      "./images/background-12.png",
+      "./images/background-13.png",
+      "./images/background-14.png",
+      "./images/background-15.png",
+      "./images/background-16.png",
+    ];
+
+    const PREVIOUS_BG_FIRST_KEY = "previous-bg-first-image";
+
+    function shuffleArray(array) {
+      const shuffled = [...array];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    }
+
+    function buildShuffledBackgrounds(images) {
+      if (images.length <= 1) return [...images];
+
+      const previousFirst = sessionStorage.getItem(PREVIOUS_BG_FIRST_KEY);
+      let shuffled = shuffleArray(images);
+
+      if (previousFirst && shuffled[0] === previousFirst) {
+        const swapIndex = 1 + Math.floor(Math.random() * (shuffled.length - 1));
+        [shuffled[0], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[0]];
+      }
+
+      sessionStorage.setItem(PREVIOUS_BG_FIRST_KEY, shuffled[0]);
+      return shuffled;
+    }
+
+    const randomizedBackgroundImages = buildShuffledBackgrounds(backgroundImages);
+
+    const imageCache = new Map();
+    const followSoundTimeouts = new Set();
+    const audioBufferCache = new Map();
+
+    const FOLLOW_KEY_DELAY = 1000;
+    const FOLLOW_KEY_GAIN = 10;
+    const FOLLOW_KEY_STEP_DELAY = 90;
+
+    let audioContext = null;
+
+    function getAudioContext() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      return audioContext;
+    }
+
+    async function resumeAudioContextIfNeeded() {
+      const ctx = getAudioContext();
+      if (ctx.state === "suspended") {
+        try {
+          await ctx.resume();
+        } catch (_) {}
+      }
+      return ctx;
+    }
+
+    function getCssNumber(variableName, fallback) {
+      const val = getComputedStyle(document.documentElement)
+        .getPropertyValue(variableName)
+        .trim();
+      const num = parseFloat(val);
+      return Number.isFinite(num) ? num : fallback;
+    }
+
+    function getGlobalScale() {
+      return getCssNumber("--global-scale", 1);
+    }
+
+    function getOverviewScale() {
+      return getCssNumber("--overview-scale", 1);
+    }
+
+    function getCameraAnchorX() {
+      return getCssNumber("--camera-anchor-x", 0.72);
+    }
+
+    function getScatterScreenXMin() {
+      return getCssNumber("--scatter-screen-x-min", 0.08);
+    }
+
+    function getScatterScreenXMax() {
+      return getCssNumber("--scatter-screen-x-max", 0.92);
+    }
+
+    function getScatterScreenYMin() {
+      return getCssNumber("--scatter-screen-y-min", 0.12);
+    }
+
+    function getScatterScreenYMax() {
+      return getCssNumber("--scatter-screen-y-max", 0.82);
+    }
+
+    function getViewportWidth() {
+      return Math.max(
+        document.documentElement.clientWidth || 0,
+        window.innerWidth || 0
+      );
+    }
+
+    function getRequiredBackgroundPanelCount() {
+      const viewportWidth = getViewportWidth();
+      const stackContentWidth = Math.max(stack.scrollWidth, stack.offsetWidth);
+      const stackLeft = parseFloat(getComputedStyle(stack).left) || 0;
+
+      const requiredWorldWidth = Math.max(
+        viewportWidth,
+        stackLeft + stackContentWidth + viewportWidth
+      );
+
+      return Math.ceil(requiredWorldWidth / viewportWidth) + 2;
+    }
+
+    let audioUnlocked = false;
+    let overviewMode = false;
+    let composedText = "";
+    let composedEnglishText = "";
+
+    let backgroundPanelCount = 0;
+    let resizeRaf = null;
+
+    let cameraCurrentX = 0;
+    let cameraStartX = 0;
+    let cameraTargetX = 0;
+    let cameraAnimationFrame = null;
+    let cameraStartTime = 0;
+    const CAMERA_DURATION = 520;
+
+    const jamoImages = {
+      "ㄱ": "./images/ㄱ.png",
+      "ㄲ": "./images/ㄲ.png",
+      "ㄴ": "./images/ㄴ.png",
+      "ㄷ": "./images/ㄷ.png",
+      "ㄸ": "./images/ㄸ.png",
+      "ㄹ": "./images/ㄹ.png",
+      "ㅁ": "./images/ㅁ.png",
+      "ㅂ": "./images/ㅂ.png",
+      "ㅃ": "./images/ㅃ.png",
+      "ㅅ": "./images/ㅅ.png",
+      "ㅆ": "./images/ㅆ.png",
+      "ㅇ": "./images/ㅇ.png",
+      "ㅈ": "./images/ㅈ.png",
+      "ㅉ": "./images/ㅉ.png",
+      "ㅊ": "./images/ㅊ.png",
+      "ㅋ": "./images/ㅋ.png",
+      "ㅌ": "./images/ㅌ.png",
+      "ㅍ": "./images/ㅍ.png",
+      "ㅎ": "./images/ㅎ.png",
+
+      "ㅏ": "./images/ㅏ.png",
+      "ㅐ": "./images/ㅐ.png",
+      "ㅑ": "./images/ㅑ.png",
+      "ㅒ": "./images/ㅒ.png",
+      "ㅓ": "./images/ㅓ.png",
+      "ㅔ": "./images/ㅔ.png",
+      "ㅕ": "./images/ㅕ.png",
+      "ㅖ": "./images/ㅖ.png",
+      "ㅗ": "./images/ㅗ.png",
+      "ㅛ": "./images/ㅛ.png",
+      "ㅜ": "./images/ㅜ.png",
+      "ㅠ": "./images/ㅠ.png",
+      "ㅡ": "./images/ㅡ.png",
+      "ㅣ": "./images/ㅣ.png"
+    };
+
+    const jamoSounds = {
+      "ㄱ": "./sounds/1.mp3",
+      "ㄲ": "./sounds/ㄲ.mp3",
+      "ㄴ": "./sounds/4.mp3",
+      "ㄷ": "./sounds/4.mp3",
+      "ㄸ": "./sounds/ㄸ.mp3",
+      "ㄹ": "./sounds/1.mp3",
+      "ㅁ": "./sounds/2.mp3",
+      "ㅂ": "./sounds/2.mp3",
+      "ㅃ": "./sounds/ㅃ.mp3",
+      "ㅅ": "./sounds/4.mp3",
+      "ㅆ": "./sounds/ㅆ.mp3",
+      "ㅇ": "./sounds/4.mp3",
+      "ㅈ": "./sounds/2.mp3",
+      "ㅉ": "./sounds/ㅉ.mp3",
+      "ㅊ": "./sounds/6.mp3",
+      "ㅋ": "./sounds/6.mp3",
+      "ㅌ": "./sounds/6.mp3",
+      "ㅍ": "./sounds/6.mp3",
+      "ㅎ": "./sounds/6.mp3",
+
+      "ㅏ": "./sounds/3.mp3",
+      "ㅐ": "./sounds/6.mp3",
+      "ㅑ": "./sounds/3.mp3",
+      "ㅒ": "./sounds/6.mp3",
+      "ㅓ": "./sounds/3.mp3",
+      "ㅔ": "./sounds/6.mp3",
+      "ㅕ": "./sounds/3.mp3",
+      "ㅖ": "./sounds/6.mp3",
+      "ㅗ": "./sounds/3.mp3",
+      "ㅛ": "./sounds/3.mp3",
+      "ㅜ": "./sounds/3.mp3",
+      "ㅠ": "./sounds/3.mp3",
+      "ㅡ": "./sounds/3.mp3",
+      "ㅣ": "./sounds/3.mp3"
+    };
+
+    const jamoToEnglishKey = {
+      "ㄱ": "r",
+      "ㄲ": "R",
+      "ㄴ": "s",
+      "ㄷ": "e",
+      "ㄸ": "E",
+      "ㄹ": "f",
+      "ㅁ": "a",
+      "ㅂ": "q",
+      "ㅃ": "Q",
+      "ㅅ": "t",
+      "ㅆ": "T",
+      "ㅇ": "d",
+      "ㅈ": "w",
+      "ㅉ": "W",
+      "ㅊ": "c",
+      "ㅋ": "z",
+      "ㅌ": "x",
+      "ㅍ": "v",
+      "ㅎ": "g",
+
+      "ㅏ": "k",
+      "ㅐ": "o",
+      "ㅑ": "i",
+      "ㅒ": "O",
+      "ㅓ": "j",
+      "ㅔ": "p",
+      "ㅕ": "u",
+      "ㅖ": "P",
+      "ㅗ": "h",
+      "ㅘ": "hk",
+      "ㅙ": "ho",
+      "ㅚ": "hl",
+      "ㅛ": "y",
+      "ㅜ": "n",
+      "ㅝ": "nj",
+      "ㅞ": "np",
+      "ㅟ": "nl",
+      "ㅠ": "b",
+      "ㅡ": "m",
+      "ㅢ": "ml",
+      "ㅣ": "l"
+    };
+
+    const englishKeySounds = {
+      "a": "./sounds/keys/sound-a.mp3",
+      "b": "./sounds/keys/sound-b.mp3",
+      "c": "./sounds/keys/sound-c.mp3",
+      "d": "./sounds/keys/sound-d.mp3",
+      "e": "./sounds/keys/sound-e.mp3",
+      "f": "./sounds/keys/sound-f.mp3",
+      "g": "./sounds/keys/sound-g.mp3",
+      "h": "./sounds/keys/sound-h.mp3",
+      "i": "./sounds/keys/sound-i.mp3",
+      "j": "./sounds/keys/sound-j.mp3",
+      "k": "./sounds/keys/sound-k.mp3",
+      "l": "./sounds/keys/sound-l.mp3",
+      "m": "./sounds/keys/sound-m.mp3",
+      "n": "./sounds/keys/sound-n.mp3",
+      "o": "./sounds/keys/sound-o.mp3",
+      "p": "./sounds/keys/sound-p.mp3",
+      "q": "./sounds/keys/sound-q.mp3",
+      "r": "./sounds/keys/sound-r.mp3",
+      "s": "./sounds/keys/sound-s.mp3",
+      "t": "./sounds/keys/sound-t.mp3",
+      "u": "./sounds/keys/sound-u.mp3",
+      "v": "./sounds/keys/sound-v.mp3",
+      "w": "./sounds/keys/sound-w.mp3",
+      "x": "./sounds/keys/sound-x.mp3",
+      "y": "./sounds/keys/sound-y.mp3",
+      "z": "./sounds/keys/sound-z.mp3",
+
+      "A": "./sounds/keys/A.mp3",
+      "B": "./sounds/keys/B.mp3",
+      "C": "./sounds/keys/C.mp3",
+      "D": "./sounds/keys/D.mp3",
+      "E": "./sounds/keys/E.mp3",
+      "F": "./sounds/keys/F.mp3",
+      "G": "./sounds/keys/G.mp3",
+      "H": "./sounds/keys/H.mp3",
+      "I": "./sounds/keys/I.mp3",
+      "J": "./sounds/keys/J.mp3",
+      "K": "./sounds/keys/K.mp3",
+      "L": "./sounds/keys/L.mp3",
+      "M": "./sounds/keys/M.mp3",
+      "N": "./sounds/keys/N.mp3",
+      "O": "./sounds/keys/O.mp3",
+      "P": "./sounds/keys/P.mp3",
+      "Q": "./sounds/keys/Q.mp3",
+      "R": "./sounds/keys/R.mp3",
+      "S": "./sounds/keys/S.mp3",
+      "T": "./sounds/keys/T.mp3",
+      "U": "./sounds/keys/U.mp3",
+      "V": "./sounds/keys/V.mp3",
+      "W": "./sounds/keys/W.mp3",
+      "X": "./sounds/keys/X.mp3",
+      "Y": "./sounds/keys/Y.mp3",
+      "Z": "./sounds/keys/Z.mp3"
+    };
+
+    const scatterJamos = new Set([
+      "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ",
+      "ㅐ", "ㅒ", "ㅔ", "ㅖ"
+    ]);
+
+    const elasticJamos = new Set([
+      "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ",
+      "ㅐ", "ㅒ", "ㅔ", "ㅖ"
+    ]);
+
+    const CHOSEONG = [
+      "ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ",
+      "ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"
+    ];
+
+    const JUNGSEONG = [
+      "ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ",
+      "ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"
+    ];
+
+    const JONGSEONG = [
+      "",
+      "ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ",
+      "ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ",
+      "ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"
+    ];
+
+    const COMPLEX_JONG_MAP = {
+      "ㄳ": ["ㄱ", "ㅅ"],
+      "ㄵ": ["ㄴ", "ㅈ"],
+      "ㄶ": ["ㄴ", "ㅎ"],
+      "ㄺ": ["ㄹ", "ㄱ"],
+      "ㄻ": ["ㄹ", "ㅁ"],
+      "ㄼ": ["ㄹ", "ㅂ"],
+      "ㄽ": ["ㄹ", "ㅅ"],
+      "ㄾ": ["ㄹ", "ㅌ"],
+      "ㄿ": ["ㄹ", "ㅍ"],
+      "ㅀ": ["ㄹ", "ㅎ"],
+      "ㅄ": ["ㅂ", "ㅅ"]
+    };
+
+    const placedTiles = [];
+    const typedHistory = [];
+
+    function easeOutCubic(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+
+    function focusInput() {
+      imeInput.focus();
+    }
+
+    async function unlockAudio() {
+      audioUnlocked = true;
+      await resumeAudioContextIfNeeded();
+    }
+
+    function updateTypedOverlay() {
+      typedText.textContent = composedText;
+    }
+
+    function updateEnglishTypedOverlay() {
+      typedTextEnglish.textContent = composedEnglishText;
+    }
+
+    function jamosToEnglishKeys(jamos) {
+      return jamos.map(jamo => jamoToEnglishKey[jamo] || "").join("");
+    }
+
+    async function loadImageAsset(src) {
+      if (imageCache.has(src)) {
+        return imageCache.get(src).cloneNode();
+      }
+
+      const img = new Image();
+      img.decoding = "async";
+      img.src = src;
+
+      try {
+        if (img.decode) {
+          await img.decode();
+        } else {
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+          });
+        }
+      } catch (_) {
+        await new Promise((resolve) => {
+          if (img.complete) {
+            resolve();
+            return;
+          }
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+        });
+      }
+
+      imageCache.set(src, img);
+      return img.cloneNode();
+    }
+
+    async function loadAudioBuffer(src) {
+      if (audioBufferCache.has(src)) {
+        return audioBufferCache.get(src);
+      }
+
+      const ctx = await resumeAudioContextIfNeeded();
+      const response = await fetch(src);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch audio: ${src}`);
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+      audioBufferCache.set(src, audioBuffer);
+      return audioBuffer;
+    }
+
+    function preloadAssets() {
+      Object.values(jamoImages).forEach(src => {
+        loadImageAsset(src).catch(() => {});
+      });
+
+      randomizedBackgroundImages.forEach(src => {
+        const img = new Image();
+        img.decoding = "async";
+        img.src = src;
+      });
+
+      Object.values(englishKeySounds).forEach(src => {
+        loadAudioBuffer(src).catch(() => {});
+      });
+    }
+
+    function animateCamera(timestamp) {
+      if (!cameraStartTime) {
+        cameraStartTime = timestamp;
+      }
+
+      const elapsed = timestamp - cameraStartTime;
+      const t = Math.min(1, elapsed / CAMERA_DURATION);
+      const eased = easeOutCubic(t);
+
+      cameraCurrentX = cameraStartX + (cameraTargetX - cameraStartX) * eased;
+      viewport.scrollLeft = cameraCurrentX;
+
+      if (t >= 1) {
+        cameraCurrentX = cameraTargetX;
+        viewport.scrollLeft = cameraCurrentX;
+        cameraAnimationFrame = null;
+        cameraStartTime = 0;
+        return;
+      }
+
+      cameraAnimationFrame = requestAnimationFrame(animateCamera);
+    }
+
+    function moveCameraTo(targetX, immediate = false) {
+      const maxScroll = Math.max(0, world.scrollWidth - viewport.clientWidth);
+      const clampedX = Math.max(0, Math.min(targetX, maxScroll));
+
+      if (immediate) {
+        if (cameraAnimationFrame) {
+          cancelAnimationFrame(cameraAnimationFrame);
+          cameraAnimationFrame = null;
+        }
+        cameraStartTime = 0;
+        cameraCurrentX = clampedX;
+        cameraStartX = clampedX;
+        cameraTargetX = clampedX;
+        viewport.scrollLeft = clampedX;
+        return;
+      }
+
+      cameraStartX = viewport.scrollLeft;
+      cameraCurrentX = viewport.scrollLeft;
+      cameraTargetX = clampedX;
+      cameraStartTime = 0;
+
+      if (cameraAnimationFrame) {
+        cancelAnimationFrame(cameraAnimationFrame);
+      }
+
+      cameraAnimationFrame = requestAnimationFrame(animateCamera);
+    }
+
+    document.addEventListener("click", async () => {
+      focusInput();
+      await unlockAudio();
+    });
+
+    window.addEventListener("load", () => {
+      focusInput();
+      cameraCurrentX = viewport.scrollLeft;
+      cameraStartX = viewport.scrollLeft;
+      cameraTargetX = viewport.scrollLeft;
+      preloadAssets();
+    });
+
+    function playAudioBySrc(src, volume = 1) {
+      if (!audioUnlocked || !src) return;
+      const audio = new Audio(src);
+      audio.volume = Math.max(0, Math.min(volume, 1));
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    }
+
+    async function playBoostedAudioBySrc(src, gainValue = 1) {
+      if (!audioUnlocked || !src) return;
+
+      try {
+        const ctx = await resumeAudioContextIfNeeded();
+        const audioBuffer = await loadAudioBuffer(src);
+
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+
+        const gainNode = ctx.createGain();
+        gainNode.gain.value = gainValue;
+
+        source.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        source.start(0);
+      } catch (_) {}
+    }
+
+    function playJamoSound(jamo) {
+      const src = jamoSounds[jamo];
+      playAudioBySrc(src, 1);
+    }
+
+    function playFollowKeySound(jamo) {
+      if (!audioUnlocked) return;
+
+      const keySequence = jamoToEnglishKey[jamo];
+      if (!keySequence) return;
+
+      const timeoutId = setTimeout(() => {
+        [...keySequence].forEach((keyChar, index) => {
+          const keySrc = englishKeySounds[keyChar];
+          if (!keySrc) return;
+
+          setTimeout(() => {
+            playBoostedAudioBySrc(keySrc, FOLLOW_KEY_GAIN);
+          }, index * FOLLOW_KEY_STEP_DELAY);
+        });
+
+        followSoundTimeouts.delete(timeoutId);
+      }, FOLLOW_KEY_DELAY);
+
+      followSoundTimeouts.add(timeoutId);
+    }
+
+    function clearFollowKeyTimeouts() {
+      followSoundTimeouts.forEach(id => clearTimeout(id));
+      followSoundTimeouts.clear();
+    }
+
+    function isHangulSyllable(char) {
+      const code = char.charCodeAt(0);
+      return code >= 0xAC00 && code <= 0xD7A3;
+    }
+
+    function isCompatibilityJamo(char) {
+      const code = char.charCodeAt(0);
+      return code >= 0x3131 && code <= 0x318E;
+    }
+
+    function decomposeHangul(char) {
+      if (isCompatibilityJamo(char)) {
+        return [char];
+      }
+
+      if (!isHangulSyllable(char)) {
+        return [];
+      }
+
+      const code = char.charCodeAt(0) - 0xAC00;
+      const cho = Math.floor(code / (21 * 28));
+      const jung = Math.floor((code % (21 * 28)) / 28);
+      const jong = code % 28;
+
+      const result = [
+        CHOSEONG[cho],
+        JUNGSEONG[jung]
+      ];
+
+      if (jong !== 0) {
+        const jongChar = JONGSEONG[jong];
+        if (COMPLEX_JONG_MAP[jongChar]) {
+          result.push(...COMPLEX_JONG_MAP[jongChar]);
+        } else {
+          result.push(jongChar);
+        }
+      }
+
+      return result;
+    }
+
+    function getCurrentScale() {
+      return overviewMode ? getOverviewScale() : 1;
+    }
+
+    function ensureBackgroundTrack() {
+      const panelWidth = getViewportWidth();
+      const neededCount = getRequiredBackgroundPanelCount();
+
+      if (neededCount === backgroundPanelCount && bgPattern.childElementCount) {
+        bgPattern.style.width = `${panelWidth * neededCount}px`;
+        bgPattern.style.height = "100vh";
+        [...bgPattern.children].forEach((panel, i) => {
+          panel.style.left = `${i * panelWidth}px`;
+          panel.style.width = `${panelWidth}px`;
+        });
+        return;
+      }
+
+      bgPattern.innerHTML = "";
+      bgPattern.style.width = `${panelWidth * neededCount}px`;
+      bgPattern.style.height = "100vh";
+
+      for (let i = 0; i < neededCount; i++) {
+        const panel = document.createElement("div");
+        panel.className = "bg-panel";
+        panel.style.left = `${i * panelWidth}px`;
+        panel.style.width = `${panelWidth}px`;
+        panel.style.backgroundImage = `url("${randomizedBackgroundImages[i % randomizedBackgroundImages.length]}")`;
+        bgPattern.appendChild(panel);
+      }
+
+      backgroundPanelCount = neededCount;
+    }
+
+    function updateWorldSize() {
+      const scale = getCurrentScale();
+      const viewportWidth = getViewportWidth();
+      const stackWidth = stack.offsetWidth * scale + viewportWidth * 0.45;
+      const backgroundTrackWidth = getRequiredBackgroundPanelCount() * viewportWidth;
+      const neededWidth = Math.max(viewportWidth, backgroundTrackWidth, stackWidth);
+
+      world.style.width = neededWidth + "px";
+      world.style.height = window.innerHeight + "px";
+      bgPattern.style.width = neededWidth + "px";
+    }
+
+    function lockViewToTile(tile, smooth = false) {
+      if (!tile) return;
+
+      const viewportRect = viewport.getBoundingClientRect();
+      const tileRect = tile.getBoundingClientRect();
+      const currentScrollLeft = viewport.scrollLeft;
+
+      const anchorX = viewport.clientWidth * getCameraAnchorX();
+      const tileAnchor =
+        tileRect.left - viewportRect.left + currentScrollLeft + tileRect.width * 0.55;
+
+      const targetScrollLeft = tileAnchor - anchorX;
+      moveCameraTo(targetScrollLeft, !smooth);
+    }
+
+    function getLastTile() {
+      return placedTiles[placedTiles.length - 1] || null;
+    }
+
+    function toggleOverviewMode() {
+      const lastTile = getLastTile();
+
+      overviewMode = !overviewMode;
+      document.body.classList.toggle("overview-mode", overviewMode);
+      updateWorldSize();
+      ensureBackgroundTrack();
+
+      if (!lastTile) return;
+
+      requestAnimationFrame(() => {
+        lockViewToTile(lastTile, false);
+      });
+
+      const onEnd = (e) => {
+        if (e.propertyName !== "transform") return;
+        if (e.target !== stack) return;
+        stack.removeEventListener("transitionend", onEnd);
+        updateWorldSize();
+        ensureBackgroundTrack();
+        lockViewToTile(lastTile, false);
+      };
+
+      stack.addEventListener("transitionend", onEnd);
+    }
+
+    function placeScatterTile(tile, imgOrFallback) {
+      const stackRect = stack.getBoundingClientRect();
+
+      const minXRatio = getScatterScreenXMin();
+      const maxXRatio = getScatterScreenXMax();
+      const minYRatio = getScatterScreenYMin();
+      const maxYRatio = getScatterScreenYMax();
+
+      const randomViewportX =
+        viewport.scrollLeft +
+        viewport.clientWidth *
+          (Math.random() * (maxXRatio - minXRatio) + minXRatio);
+
+      const randomViewportY =
+        viewport.clientHeight *
+          (Math.random() * (maxYRatio - minYRatio) + minYRatio);
+
+      const localLeft =
+        randomViewportX - stack.offsetLeft - imgOrFallback.offsetWidth * 0.5;
+
+      const localTop =
+        randomViewportY - stackRect.top - imgOrFallback.offsetHeight * 0.5;
+
+      tile.style.left = `${localLeft}px`;
+      tile.style.top = `${localTop}px`;
+      tile.style.bottom = "auto";
+      imgOrFallback.style.transform = "none";
+    }
+
+    function applyTileMetrics(tile, jamo, img) {
+      const globalScale = getGlobalScale();
+      const scaledWidth = img.naturalWidth * globalScale;
+      const scaledHeight = img.naturalHeight * globalScale;
+
+      img.style.width = `${scaledWidth}px`;
+      img.style.height = `${scaledHeight}px`;
+
+      tile.style.marginLeft = "0px";
+      tile.style.marginRight = "0px";
+      tile.style.marginTop = "0px";
+      tile.style.marginBottom = "0px";
+      tile.style.zIndex = scatterJamos.has(jamo) ? "3" : "2";
+
+      if (scatterJamos.has(jamo)) {
+        tile.classList.add("scatter");
+        placeScatterTile(tile, img);
+      } else {
+        tile.classList.remove("scatter");
+        tile.style.left = "";
+        tile.style.top = "";
+        tile.style.bottom = "";
+        img.style.transform = "none";
+      }
+    }
+
+    function applyFallbackMetrics(tile, jamo, fallback) {
+      tile.style.marginLeft = "0px";
+      tile.style.marginRight = "0px";
+      tile.style.marginTop = "0px";
+      tile.style.marginBottom = "0px";
+      tile.style.zIndex = scatterJamos.has(jamo) ? "3" : "2";
+
+      if (scatterJamos.has(jamo)) {
+        tile.classList.add("scatter");
+        placeScatterTile(tile, fallback);
+      } else {
+        tile.classList.remove("scatter");
+        tile.style.left = "";
+        tile.style.top = "";
+        tile.style.bottom = "";
+        fallback.style.transform = "none";
+      }
+    }
+
+    function setStrongRandomTilt(img, jamo) {
+      if (!img || !elasticJamos.has(jamo)) {
+        img.style.setProperty("--tilt", "0deg");
+        img.style.setProperty("--rest-tilt", "0deg");
+        return;
+      }
+
+      const angle = (-70 + Math.random() * 100).toFixed(2);
+      img.style.setProperty("--tilt", `${angle}deg`);
+      img.style.setProperty("--rest-tilt", `${angle}deg`);
+      img.style.transformOrigin = "center bottom";
+      img.style.transform = `rotate(${angle}deg)`;
+    }
+
+    function applyElasticAnimation(img, jamo) {
+      if (!img || !elasticJamos.has(jamo)) return;
+
+      const horizontalBias = Math.random() > 0.45;
+
+      let stretchX;
+      let stretchY;
+
+      if (horizontalBias) {
+        stretchX = (4.2 + Math.random() * 3.0).toFixed(3);
+        stretchY = (0.04 + Math.random() * 0.22).toFixed(3);
+      } else {
+        stretchX = (0.35 + Math.random() * 0.28).toFixed(3);
+        stretchY = (4.0 + Math.random() * 4.6).toFixed(3);
+      }
+
+      img.style.setProperty("--stretch-x", stretchX);
+      img.style.setProperty("--stretch-y", stretchY);
+      img.style.transformOrigin = "center bottom";
+      img.style.overflow = "visible";
+
+      img.classList.remove("elastic-enter");
+      void img.offsetWidth;
+      img.classList.add("elastic-enter");
+
+      const clearElastic = () => {
+        img.classList.remove("elastic-enter");
+        img.style.removeProperty("--stretch-x");
+        img.style.removeProperty("--stretch-y");
+        img.style.removeProperty("overflow");
+        img.removeEventListener("animationend", clearElastic);
+
+        if (elasticJamos.has(jamo)) {
+          img.style.transform = `rotate(${img.style.getPropertyValue("--rest-tilt").trim() || "0deg"})`;
+        } else {
+          img.style.transform = "none";
+        }
+      };
+
+      img.addEventListener("animationend", clearElastic, { once: true });
+    }
+
+    async function createTile(jamo) {
+      const tile = document.createElement("div");
+      tile.className = "tile";
+      tile.dataset.jamo = jamo;
+
+      const src = jamoImages[jamo];
+      placedTiles.push(tile);
+
+      if (src) {
+        const img = await loadImageAsset(src);
+        img.alt = jamo;
+        tile.appendChild(img);
+        stack.appendChild(tile);
+
+        applyTileMetrics(tile, jamo, img);
+        setStrongRandomTilt(img, jamo);
+        applyElasticAnimation(img, jamo);
+        updateWorldSize();
+        ensureBackgroundTrack();
+
+        if (!scatterJamos.has(jamo)) {
+          lockViewToTile(tile, true);
+        }
+      } else {
+        const fallback = document.createElement("div");
+        fallback.className = "fallback";
+        fallback.textContent = jamo;
+
+        tile.appendChild(fallback);
+        stack.appendChild(tile);
+
+        applyFallbackMetrics(tile, jamo, fallback);
+        updateWorldSize();
+        ensureBackgroundTrack();
+
+        if (!scatterJamos.has(jamo)) {
+          lockViewToTile(tile, true);
+        }
+      }
+
+      playJamoSound(jamo);
+      playFollowKeySound(jamo);
+    }
+
+    function addCharacter(char) {
+      const jamos = decomposeHangul(char);
+      if (!jamos.length) return;
+
+      const englishKeys = jamosToEnglishKeys(jamos);
+
+      typedHistory.push({
+        char,
+        jamos,
+        englishKeys,
+        tileCount: jamos.length
+      });
+
+      composedText += char;
+      composedEnglishText += englishKeys;
+
+      updateTypedOverlay();
+      updateEnglishTypedOverlay();
+
+      jamos.forEach(jamo => {
+        createTile(jamo);
+      });
+    }
+
+    function removeLastTile() {
+      const lastEntry = typedHistory.pop();
+      if (!lastEntry) return;
+
+      for (let i = 0; i < lastEntry.tileCount; i++) {
+        const lastTile = placedTiles.pop();
+        if (lastTile) lastTile.remove();
+      }
+
+      if (lastEntry.char === "\n") {
+        composedText = composedText.slice(0, -1);
+        composedEnglishText = composedEnglishText.slice(0, -1);
+      } else {
+        composedText = composedText.slice(0, -lastEntry.char.length);
+        composedEnglishText = composedEnglishText.slice(0, -lastEntry.englishKeys.length);
+      }
+
+      updateTypedOverlay();
+      updateEnglishTypedOverlay();
+
+      updateWorldSize();
+      ensureBackgroundTrack();
+
+      const newLast = [...placedTiles].reverse().find(tile => !tile.classList.contains("scatter"));
+      if (newLast) {
+        requestAnimationFrame(() => lockViewToTile(newLast, false));
+      }
+    }
+
+    function clearAllTiles() {
+      placedTiles.splice(0).forEach(el => el.remove());
+      typedHistory.splice(0);
+      clearFollowKeyTimeouts();
+
+      composedText = "";
+      composedEnglishText = "";
+      updateTypedOverlay();
+      updateEnglishTypedOverlay();
+
+      updateWorldSize();
+      ensureBackgroundTrack();
+      moveCameraTo(0, true);
+    }
+
+    let previousValue = "";
+
+    imeInput.addEventListener("input", () => {
+      const currentValue = imeInput.value;
+
+      if (!currentValue) {
+        previousValue = "";
+        return;
+      }
+
+      if (currentValue.length < previousValue.length) {
+        previousValue = currentValue;
+        return;
+      }
+
+      const newText = currentValue.slice(previousValue.length);
+      previousValue = currentValue;
+
+      for (const char of newText) {
+        addCharacter(char);
+      }
+
+      imeInput.value = "";
+      previousValue = "";
+    });
+
+    imeInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+
+        typedHistory.push({
+          char: "\n",
+          jamos: [],
+          englishKeys: "\n",
+          tileCount: 0
+        });
+
+        composedText += "\n";
+        composedEnglishText += "\n";
+        updateTypedOverlay();
+        updateEnglishTypedOverlay();
+        imeInput.value = "";
+        previousValue = "";
+        return;
+      }
+
+      if (e.key === "Tab") {
+        e.preventDefault();
+        toggleOverviewMode();
+        imeInput.value = "";
+        previousValue = "";
+        return;
+      }
+
+      if (e.key === "Backspace") {
+        e.preventDefault();
+        removeLastTile();
+        imeInput.value = "";
+        previousValue = "";
+        return;
+      }
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        clearAllTiles();
+        imeInput.value = "";
+        previousValue = "";
+      }
+    });
+
+    window.addEventListener("resize", () => {
+      if (resizeRaf) cancelAnimationFrame(resizeRaf);
+
+      resizeRaf = requestAnimationFrame(() => {
+        ensureBackgroundTrack();
+
+        const tiles = [...placedTiles];
+        tiles.forEach(tile => {
+          if (!tile.parentNode) return;
+          const jamo = tile.dataset.jamo;
+          const visual = tile.querySelector("img, .fallback");
+          if (!visual) return;
+
+          if (scatterJamos.has(jamo)) {
+            placeScatterTile(tile, visual);
+          }
+        });
+
+        updateWorldSize();
+
+        const lastFlowTile = [...placedTiles].reverse().find(
+          tile => !tile.classList.contains("scatter")
+        );
+
+        if (lastFlowTile) {
+          lockViewToTile(lastFlowTile, false);
+        } else {
+          moveCameraTo(viewport.scrollLeft, true);
+        }
+
+        resizeRaf = null;
+      });
+    });
+
+    updateTypedOverlay();
+    updateEnglishTypedOverlay();
+    updateWorldSize();
+    ensureBackgroundTrack();
+    moveCameraTo(0, true);
+  </script>
+</body>
+</html>
