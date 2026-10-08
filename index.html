@@ -46,11 +46,12 @@
       cursor: text;
     }
 
-    .hidden-input {
+    .webring {
       position: fixed;
-      left: -9999px;
-      top: 0;
-      opacity: 0;
+      left: 10px;
+      top: 10px;
+      opacity: 100;
+      pointer-events: none;
     }
     
     .viewport {
@@ -283,14 +284,13 @@
       }
     }
 
-    .webring {
+.hidden-input {
       position: fixed;
-      left: 10px;
-      top: 10px;
-      opacity: 100;
-      pointer-events: none;
-    
+      left: -9999px;
+      top: 0;
+      opacity: 0;
     }
+    
 
   </style>
 </head>
