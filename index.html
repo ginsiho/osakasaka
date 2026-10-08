@@ -46,6 +46,13 @@
       cursor: text;
     }
 
+    .hidden-input {
+      position: fixed;
+      left: -9999px;
+      top: 0;
+      opacity: 0;
+    }
+    
     .viewport {
       position: relative;
       width: 100vw;
@@ -221,14 +228,6 @@
       color: var(--english-text-color);
       letter-spacing: var(--english-letter-spacing);
       background-color: rgba(#f5f5f5, var(--english-bg-opacity));
-    }
-
-    .hidden-input {
-      position: fixed;
-      left: -9999px;
-      top: 0;
-      opacity: 0;
-      pointer-events: none;
     }
 
     @keyframes pop {
