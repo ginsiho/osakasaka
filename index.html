@@ -283,9 +283,24 @@
         transform: rotate(var(--rest-tilt, 0deg)) scale(1, 1);
       }
     }
+
+    .webring {
+      position: fixed;
+      left: 10px;
+      top: 10px;
+      opacity: 100;
+      pointer-events: none;
+    
+    }
+
   </style>
 </head>
 <body>
+
+  <div class="webring">
+  <a href="https://overnight-bird.netlify.app/">미진</a>
+  <a href="https://seongjeenpai.neocities.org/">성진</a>
+  </div>
   
   <input
     id="imeInput"
@@ -316,11 +331,6 @@
       <div id="bgPattern" class="bg-pattern"></div>
       <div id="stack" class="stack"></div>
     </div>
-
-     <div>
-  <a href="https://overnight-bird.netlify.app/">미진</a>
-  <a href="https://seongjeenpai.neocities.org/">성진</a>
-  </div>
   </div>
 
   <script>
