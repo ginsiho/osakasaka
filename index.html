@@ -1,9 +1,13 @@
+응! **웹링 클릭이 가능하도록 수정한 전체 코드**야. 웹링을 화면 위에 올리고, 웹링을 클릭할 때는 숨겨진 타이핑 입력창으로 포커스가 이동하지 않도록 바꿨어. 이미지·사운드 경로와 나머지 기능은 유지했어.
+
+```html
 <!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>남</title>
+
   <style>
     :root {
       --bg: #111;
@@ -24,7 +28,7 @@
       --english-text-color: rgb(0, 0, 0);
       --english-offset-y: 0.55em;
       --english-letter-spacing: 0.5em;
-      --english-bg-rgb: #f5f5f5;
+      --english-bg-rgb: 245, 245, 245;
       --english-bg-opacity: 0.35;
     }
 
@@ -32,7 +36,8 @@
       box-sizing: border-box;
     }
 
-    html, body {
+    html,
+    body {
       margin: 0;
       width: 100%;
       height: 100%;
@@ -46,14 +51,21 @@
       cursor: text;
     }
 
+    /* 웹링: 클릭 허용 + 다른 요소보다 위에 표시 */
     .webring {
       position: fixed;
       left: 10px;
       top: 10px;
-      opacity: 100;
-      pointer-events: none;
+      z-index: 100;
+      opacity: 1;
+      pointer-events: auto;
     }
-    
+
+    .webring a {
+      color: inherit;
+      cursor: pointer;
+    }
+
     .viewport {
       position: relative;
       width: 100vw;
@@ -104,7 +116,7 @@
       flex-direction: row;
       align-items: flex-end;
       gap: var(--stack-gap);
-      padding: 0 20vw 0 20vw;
+      padding: 0 20vw;
       z-index: 1;
       transform-origin: left bottom;
       transition: transform 260ms ease;
@@ -161,8 +173,8 @@
       min-width: 84px;
       min-height: 84px;
       padding: 14px;
-      border: 1px solid rgba(255,255,255,0.15);
-      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.04);
       font-size: clamp(28px, 7vw, 70px);
       border-radius: 16px;
       line-height: 1;
@@ -201,7 +213,7 @@
       display: inline;
       background: rgb(255, 255, 255);
       color: rgb(0, 163, 232);
-      padding: 1px 1px;
+      padding: 1px;
       letter-spacing: -0.02em;
       white-space: pre-wrap;
       overflow-wrap: anywhere;
@@ -228,7 +240,15 @@
       z-index: 20;
       color: var(--english-text-color);
       letter-spacing: var(--english-letter-spacing);
-      background-color: rgba(#f5f5f5, var(--english-bg-opacity));
+      background-color:
+        rgba(var(--english-bg-rgb), var(--english-bg-opacity));
+    }
+
+    .hidden-input {
+      position: fixed;
+      left: -9999px;
+      top: 0;
+      opacity: 0;
     }
 
     @keyframes pop {
@@ -236,6 +256,7 @@
         opacity: 0;
         transform: translateX(14px) scale(0.985);
       }
+
       to {
         opacity: 1;
         transform: translateX(0) scale(1);
@@ -244,7 +265,8 @@
 
     .tile img.elastic-enter {
       transform-origin: center bottom;
-      animation: elastic-rubber 760ms cubic-bezier(0.2, 0.95, 0.25, 1) both;
+      animation:
+        elastic-rubber 760ms cubic-bezier(0.2, 0.95, 0.25, 1) both;
       will-change: transform;
       overflow: visible;
     }
@@ -255,6 +277,7 @@
           rotate(var(--tilt, 0deg))
           scale(var(--stretch-x, 1), var(--stretch-y, 1));
       }
+
       18% {
         transform:
           rotate(calc(var(--tilt, 0deg) * -0.72))
@@ -263,6 +286,7 @@
             calc(1 + (1 - var(--stretch-y, 1)) * 0.70)
           );
       }
+
       42% {
         transform:
           rotate(calc(var(--tilt, 0deg) * 0.34))
@@ -271,6 +295,7 @@
             calc(1 - (1 - var(--stretch-y, 1)) * 0.24)
           );
       }
+
       68% {
         transform:
           rotate(calc(var(--tilt, 0deg) * -0.14))
@@ -279,32 +304,25 @@
             calc(1 + (1 - var(--stretch-y, 1)) * 0.08)
           );
       }
+
       100% {
         transform: rotate(var(--rest-tilt, 0deg)) scale(1, 1);
       }
     }
-
-.hidden-input {
-      position: fixed;
-      left: -9999px;
-      top: 0;
-      opacity: 0;
-    }
-    
-
   </style>
 </head>
-<body>
 
+<body>
   <div class="webring">
-  <a href="https://overnight-bird.netlify.app/">미진</a>
-  <a href="https://seongjeenpai.neocities.org/">성진</a>
+    <a href="https://overnight-bird.netlify.app/">미진</a>
+    <a href="https://seongjeenpai.neocities.org/">성진</a>
   </div>
-  
+
   <input
     id="imeInput"
     class="hidden-input"
     type="text"
+    aria-label="한글 입력"
     autocomplete="off"
     autocorrect="off"
     autocapitalize="off"
@@ -357,36 +375,45 @@
       "./images/background-13.png",
       "./images/background-14.png",
       "./images/background-15.png",
-      "./images/background-16.png",
+      "./images/background-16.png"
     ];
 
     const PREVIOUS_BG_FIRST_KEY = "previous-bg-first-image";
 
     function shuffleArray(array) {
       const shuffled = [...array];
+
       for (let i = shuffled.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
       }
+
       return shuffled;
     }
 
     function buildShuffledBackgrounds(images) {
       if (images.length <= 1) return [...images];
 
-      const previousFirst = sessionStorage.getItem(PREVIOUS_BG_FIRST_KEY);
-      let shuffled = shuffleArray(images);
+      const previousFirst =
+        sessionStorage.getItem(PREVIOUS_BG_FIRST_KEY);
+
+      const shuffled = shuffleArray(images);
 
       if (previousFirst && shuffled[0] === previousFirst) {
-        const swapIndex = 1 + Math.floor(Math.random() * (shuffled.length - 1));
-        [shuffled[0], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[0]];
+        const swapIndex =
+          1 + Math.floor(Math.random() * (shuffled.length - 1));
+
+        [shuffled[0], shuffled[swapIndex]] =
+          [shuffled[swapIndex], shuffled[0]];
       }
 
       sessionStorage.setItem(PREVIOUS_BG_FIRST_KEY, shuffled[0]);
+
       return shuffled;
     }
 
-    const randomizedBackgroundImages = buildShuffledBackgrounds(backgroundImages);
+    const randomizedBackgroundImages =
+      buildShuffledBackgrounds(backgroundImages);
 
     const imageCache = new Map();
     const followSoundTimeouts = new Set();
@@ -400,27 +427,34 @@
 
     function getAudioContext() {
       if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        audioContext = new (
+          window.AudioContext || window.webkitAudioContext
+        )();
       }
+
       return audioContext;
     }
 
     async function resumeAudioContextIfNeeded() {
       const ctx = getAudioContext();
+
       if (ctx.state === "suspended") {
         try {
           await ctx.resume();
         } catch (_) {}
       }
+
       return ctx;
     }
 
     function getCssNumber(variableName, fallback) {
-      const val = getComputedStyle(document.documentElement)
+      const value = getComputedStyle(document.documentElement)
         .getPropertyValue(variableName)
         .trim();
-      const num = parseFloat(val);
-      return Number.isFinite(num) ? num : fallback;
+
+      const number = parseFloat(value);
+
+      return Number.isFinite(number) ? number : fallback;
     }
 
     function getGlobalScale() {
@@ -460,8 +494,11 @@
 
     function getRequiredBackgroundPanelCount() {
       const viewportWidth = getViewportWidth();
-      const stackContentWidth = Math.max(stack.scrollWidth, stack.offsetWidth);
-      const stackLeft = parseFloat(getComputedStyle(stack).left) || 0;
+      const stackContentWidth =
+        Math.max(stack.scrollWidth, stack.offsetWidth);
+
+      const stackLeft =
+        parseFloat(getComputedStyle(stack).left) || 0;
 
       const requiredWorldWidth = Math.max(
         viewportWidth,
@@ -484,6 +521,7 @@
     let cameraTargetX = 0;
     let cameraAnimationFrame = null;
     let cameraStartTime = 0;
+
     const CAMERA_DURATION = 520;
 
     const jamoImages = {
@@ -671,20 +709,20 @@
     ]);
 
     const CHOSEONG = [
-      "ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ",
-      "ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"
+      "ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ", "ㅂ", "ㅃ", "ㅅ",
+      "ㅆ", "ㅇ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"
     ];
 
     const JUNGSEONG = [
-      "ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ",
-      "ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"
+      "ㅏ", "ㅐ", "ㅑ", "ㅒ", "ㅓ", "ㅔ", "ㅕ", "ㅖ", "ㅗ", "ㅘ",
+      "ㅙ", "ㅚ", "ㅛ", "ㅜ", "ㅝ", "ㅞ", "ㅟ", "ㅠ", "ㅡ", "ㅢ", "ㅣ"
     ];
 
     const JONGSEONG = [
       "",
-      "ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ",
-      "ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ",
-      "ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"
+      "ㄱ", "ㄲ", "ㄳ", "ㄴ", "ㄵ", "ㄶ", "ㄷ", "ㄹ", "ㄺ", "ㄻ",
+      "ㄼ", "ㄽ", "ㄾ", "ㄿ", "ㅀ", "ㅁ", "ㅂ", "ㅄ", "ㅅ", "ㅆ",
+      "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"
     ];
 
     const COMPLEX_JONG_MAP = {
@@ -709,7 +747,7 @@
     }
 
     function focusInput() {
-      imeInput.focus();
+      imeInput.focus({ preventScroll: true });
     }
 
     async function unlockAudio() {
@@ -726,7 +764,9 @@
     }
 
     function jamosToEnglishKeys(jamos) {
-      return jamos.map(jamo => jamoToEnglishKey[jamo] || "").join("");
+      return jamos
+        .map(jamo => jamoToEnglishKey[jamo] || "")
+        .join("");
     }
 
     async function loadImageAsset(src) {
@@ -748,17 +788,19 @@
           });
         }
       } catch (_) {
-        await new Promise((resolve) => {
+        await new Promise(resolve => {
           if (img.complete) {
             resolve();
             return;
           }
+
           img.onload = () => resolve();
           img.onerror = () => resolve();
         });
       }
 
       imageCache.set(src, img);
+
       return img.cloneNode();
     }
 
@@ -769,13 +811,16 @@
 
       const ctx = await resumeAudioContextIfNeeded();
       const response = await fetch(src);
+
       if (!response.ok) {
         throw new Error(`Failed to fetch audio: ${src}`);
       }
 
       const arrayBuffer = await response.arrayBuffer();
       const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+
       audioBufferCache.set(src, audioBuffer);
+
       return audioBuffer;
     }
 
@@ -804,7 +849,9 @@
       const t = Math.min(1, elapsed / CAMERA_DURATION);
       const eased = easeOutCubic(t);
 
-      cameraCurrentX = cameraStartX + (cameraTargetX - cameraStartX) * eased;
+      cameraCurrentX =
+        cameraStartX + (cameraTargetX - cameraStartX) * eased;
+
       viewport.scrollLeft = cameraCurrentX;
 
       if (t >= 1) {
@@ -819,7 +866,11 @@
     }
 
     function moveCameraTo(targetX, immediate = false) {
-      const maxScroll = Math.max(0, world.scrollWidth - viewport.clientWidth);
+      const maxScroll = Math.max(
+        0,
+        world.scrollWidth - viewport.clientWidth
+      );
+
       const clampedX = Math.max(0, Math.min(targetX, maxScroll));
 
       if (immediate) {
@@ -827,11 +878,13 @@
           cancelAnimationFrame(cameraAnimationFrame);
           cameraAnimationFrame = null;
         }
+
         cameraStartTime = 0;
         cameraCurrentX = clampedX;
         cameraStartX = clampedX;
         cameraTargetX = clampedX;
         viewport.scrollLeft = clampedX;
+
         return;
       }
 
@@ -847,22 +900,29 @@
       cameraAnimationFrame = requestAnimationFrame(animateCamera);
     }
 
-    document.addEventListener("click", async () => {
+    /* 웹링 클릭 시에는 입력창에 포커스하지 않음 */
+    document.addEventListener("click", async event => {
+      if (event.target.closest(".webring")) return;
+
       focusInput();
       await unlockAudio();
     });
 
     window.addEventListener("load", () => {
       focusInput();
+
       cameraCurrentX = viewport.scrollLeft;
       cameraStartX = viewport.scrollLeft;
       cameraTargetX = viewport.scrollLeft;
+
       preloadAssets();
     });
 
     function playAudioBySrc(src, volume = 1) {
       if (!audioUnlocked || !src) return;
+
       const audio = new Audio(src);
+
       audio.volume = Math.max(0, Math.min(volume, 1));
       audio.currentTime = 0;
       audio.play().catch(() => {});
@@ -888,19 +948,20 @@
     }
 
     function playJamoSound(jamo) {
-      const src = jamoSounds[jamo];
-      playAudioBySrc(src, 1);
+      playAudioBySrc(jamoSounds[jamo], 1);
     }
 
     function playFollowKeySound(jamo) {
       if (!audioUnlocked) return;
 
       const keySequence = jamoToEnglishKey[jamo];
+
       if (!keySequence) return;
 
       const timeoutId = setTimeout(() => {
         [...keySequence].forEach((keyChar, index) => {
           const keySrc = englishKeySounds[keyChar];
+
           if (!keySrc) return;
 
           setTimeout(() => {
@@ -950,6 +1011,7 @@
 
       if (jong !== 0) {
         const jongChar = JONGSEONG[jong];
+
         if (COMPLEX_JONG_MAP[jongChar]) {
           result.push(...COMPLEX_JONG_MAP[jongChar]);
         } else {
@@ -968,13 +1030,18 @@
       const panelWidth = getViewportWidth();
       const neededCount = getRequiredBackgroundPanelCount();
 
-      if (neededCount === backgroundPanelCount && bgPattern.childElementCount) {
+      if (
+        neededCount === backgroundPanelCount &&
+        bgPattern.childElementCount
+      ) {
         bgPattern.style.width = `${panelWidth * neededCount}px`;
         bgPattern.style.height = "100vh";
+
         [...bgPattern.children].forEach((panel, i) => {
           panel.style.left = `${i * panelWidth}px`;
           panel.style.width = `${panelWidth}px`;
         });
+
         return;
       }
 
@@ -984,10 +1051,18 @@
 
       for (let i = 0; i < neededCount; i++) {
         const panel = document.createElement("div");
+
         panel.className = "bg-panel";
         panel.style.left = `${i * panelWidth}px`;
         panel.style.width = `${panelWidth}px`;
-        panel.style.backgroundImage = `url("${randomizedBackgroundImages[i % randomizedBackgroundImages.length]}")`;
+
+        const background =
+          randomizedBackgroundImages[
+            i % randomizedBackgroundImages.length
+          ];
+
+        panel.style.backgroundImage = `url("${background}")`;
+
         bgPattern.appendChild(panel);
       }
 
@@ -997,13 +1072,22 @@
     function updateWorldSize() {
       const scale = getCurrentScale();
       const viewportWidth = getViewportWidth();
-      const stackWidth = stack.offsetWidth * scale + viewportWidth * 0.45;
-      const backgroundTrackWidth = getRequiredBackgroundPanelCount() * viewportWidth;
-      const neededWidth = Math.max(viewportWidth, backgroundTrackWidth, stackWidth);
 
-      world.style.width = neededWidth + "px";
-      world.style.height = window.innerHeight + "px";
-      bgPattern.style.width = neededWidth + "px";
+      const stackWidth =
+        stack.offsetWidth * scale + viewportWidth * 0.45;
+
+      const backgroundTrackWidth =
+        getRequiredBackgroundPanelCount() * viewportWidth;
+
+      const neededWidth = Math.max(
+        viewportWidth,
+        backgroundTrackWidth,
+        stackWidth
+      );
+
+      world.style.width = `${neededWidth}px`;
+      world.style.height = `${window.innerHeight}px`;
+      bgPattern.style.width = `${neededWidth}px`;
     }
 
     function lockViewToTile(tile, smooth = false) {
@@ -1013,11 +1097,17 @@
       const tileRect = tile.getBoundingClientRect();
       const currentScrollLeft = viewport.scrollLeft;
 
-      const anchorX = viewport.clientWidth * getCameraAnchorX();
+      const anchorX =
+        viewport.clientWidth * getCameraAnchorX();
+
       const tileAnchor =
-        tileRect.left - viewportRect.left + currentScrollLeft + tileRect.width * 0.55;
+        tileRect.left -
+        viewportRect.left +
+        currentScrollLeft +
+        tileRect.width * 0.55;
 
       const targetScrollLeft = tileAnchor - anchorX;
+
       moveCameraTo(targetScrollLeft, !smooth);
     }
 
@@ -1029,7 +1119,12 @@
       const lastTile = getLastTile();
 
       overviewMode = !overviewMode;
-      document.body.classList.toggle("overview-mode", overviewMode);
+
+      document.body.classList.toggle(
+        "overview-mode",
+        overviewMode
+      );
+
       updateWorldSize();
       ensureBackgroundTrack();
 
@@ -1039,10 +1134,12 @@
         lockViewToTile(lastTile, false);
       });
 
-      const onEnd = (e) => {
-        if (e.propertyName !== "transform") return;
-        if (e.target !== stack) return;
+      const onEnd = event => {
+        if (event.propertyName !== "transform") return;
+        if (event.target !== stack) return;
+
         stack.removeEventListener("transitionend", onEnd);
+
         updateWorldSize();
         ensureBackgroundTrack();
         lockViewToTile(lastTile, false);
@@ -1062,36 +1159,36 @@
       const randomViewportX =
         viewport.scrollLeft +
         viewport.clientWidth *
-          (Math.random() * (maxXRatio - minXRatio) + minXRatio);
+        (Math.random() * (maxXRatio - minXRatio) + minXRatio);
 
       const randomViewportY =
         viewport.clientHeight *
-          (Math.random() * (maxYRatio - minYRatio) + minYRatio);
+        (Math.random() * (maxYRatio - minYRatio) + minYRatio);
 
       const localLeft =
-        randomViewportX - stack.offsetLeft - imgOrFallback.offsetWidth * 0.5;
+        randomViewportX -
+        stack.offsetLeft -
+        imgOrFallback.offsetWidth * 0.5;
 
       const localTop =
-        randomViewportY - stackRect.top - imgOrFallback.offsetHeight * 0.5;
+        randomViewportY -
+        stackRect.top -
+        imgOrFallback.offsetHeight * 0.5;
 
       tile.style.left = `${localLeft}px`;
       tile.style.top = `${localTop}px`;
       tile.style.bottom = "auto";
+
       imgOrFallback.style.transform = "none";
     }
 
     function applyTileMetrics(tile, jamo, img) {
       const globalScale = getGlobalScale();
-      const scaledWidth = img.naturalWidth * globalScale;
-      const scaledHeight = img.naturalHeight * globalScale;
 
-      img.style.width = `${scaledWidth}px`;
-      img.style.height = `${scaledHeight}px`;
+      img.style.width = `${img.naturalWidth * globalScale}px`;
+      img.style.height = `${img.naturalHeight * globalScale}px`;
 
-      tile.style.marginLeft = "0px";
-      tile.style.marginRight = "0px";
-      tile.style.marginTop = "0px";
-      tile.style.marginBottom = "0px";
+      tile.style.margin = "0px";
       tile.style.zIndex = scatterJamos.has(jamo) ? "3" : "2";
 
       if (scatterJamos.has(jamo)) {
@@ -1107,10 +1204,7 @@
     }
 
     function applyFallbackMetrics(tile, jamo, fallback) {
-      tile.style.marginLeft = "0px";
-      tile.style.marginRight = "0px";
-      tile.style.marginTop = "0px";
-      tile.style.marginBottom = "0px";
+      tile.style.margin = "0px";
       tile.style.zIndex = scatterJamos.has(jamo) ? "3" : "2";
 
       if (scatterJamos.has(jamo)) {
@@ -1126,13 +1220,16 @@
     }
 
     function setStrongRandomTilt(img, jamo) {
-      if (!img || !elasticJamos.has(jamo)) {
+      if (!img) return;
+
+      if (!elasticJamos.has(jamo)) {
         img.style.setProperty("--tilt", "0deg");
         img.style.setProperty("--rest-tilt", "0deg");
         return;
       }
 
       const angle = (-70 + Math.random() * 100).toFixed(2);
+
       img.style.setProperty("--tilt", `${angle}deg`);
       img.style.setProperty("--rest-tilt", `${angle}deg`);
       img.style.transformOrigin = "center bottom";
@@ -1169,28 +1266,40 @@
         img.style.removeProperty("--stretch-x");
         img.style.removeProperty("--stretch-y");
         img.style.removeProperty("overflow");
+
         img.removeEventListener("animationend", clearElastic);
 
         if (elasticJamos.has(jamo)) {
-          img.style.transform = `rotate(${img.style.getPropertyValue("--rest-tilt").trim() || "0deg"})`;
+          const restTilt =
+            img.style.getPropertyValue("--rest-tilt").trim() ||
+            "0deg";
+
+          img.style.transform = `rotate(${restTilt})`;
         } else {
           img.style.transform = "none";
         }
       };
 
-      img.addEventListener("animationend", clearElastic, { once: true });
+      img.addEventListener(
+        "animationend",
+        clearElastic,
+        { once: true }
+      );
     }
 
     async function createTile(jamo) {
       const tile = document.createElement("div");
+
       tile.className = "tile";
       tile.dataset.jamo = jamo;
 
       const src = jamoImages[jamo];
+
       placedTiles.push(tile);
 
       if (src) {
         const img = await loadImageAsset(src);
+
         img.alt = jamo;
         tile.appendChild(img);
         stack.appendChild(tile);
@@ -1198,6 +1307,7 @@
         applyTileMetrics(tile, jamo, img);
         setStrongRandomTilt(img, jamo);
         applyElasticAnimation(img, jamo);
+
         updateWorldSize();
         ensureBackgroundTrack();
 
@@ -1206,6 +1316,7 @@
         }
       } else {
         const fallback = document.createElement("div");
+
         fallback.className = "fallback";
         fallback.textContent = jamo;
 
@@ -1213,6 +1324,7 @@
         stack.appendChild(tile);
 
         applyFallbackMetrics(tile, jamo, fallback);
+
         updateWorldSize();
         ensureBackgroundTrack();
 
@@ -1227,6 +1339,7 @@
 
     function addCharacter(char) {
       const jamos = decomposeHangul(char);
+
       if (!jamos.length) return;
 
       const englishKeys = jamosToEnglishKeys(jamos);
@@ -1251,45 +1364,63 @@
 
     function removeLastTile() {
       const lastEntry = typedHistory.pop();
+
       if (!lastEntry) return;
 
       for (let i = 0; i < lastEntry.tileCount; i++) {
         const lastTile = placedTiles.pop();
-        if (lastTile) lastTile.remove();
+
+        if (lastTile) {
+          lastTile.remove();
+        }
       }
 
       if (lastEntry.char === "\n") {
         composedText = composedText.slice(0, -1);
         composedEnglishText = composedEnglishText.slice(0, -1);
       } else {
-        composedText = composedText.slice(0, -lastEntry.char.length);
-        composedEnglishText = composedEnglishText.slice(0, -lastEntry.englishKeys.length);
+        composedText =
+          composedText.slice(0, -lastEntry.char.length);
+
+        composedEnglishText =
+          composedEnglishText.slice(
+            0,
+            -lastEntry.englishKeys.length
+          );
       }
 
       updateTypedOverlay();
       updateEnglishTypedOverlay();
-
       updateWorldSize();
       ensureBackgroundTrack();
 
-      const newLast = [...placedTiles].reverse().find(tile => !tile.classList.contains("scatter"));
+      const newLast = [...placedTiles]
+        .reverse()
+        .find(tile => !tile.classList.contains("scatter"));
+
       if (newLast) {
-        requestAnimationFrame(() => lockViewToTile(newLast, false));
+        requestAnimationFrame(() => {
+          lockViewToTile(newLast, false);
+        });
       }
     }
 
     function clearAllTiles() {
-      placedTiles.splice(0).forEach(el => el.remove());
+      placedTiles.splice(0).forEach(element => {
+        element.remove();
+      });
+
       typedHistory.splice(0);
       clearFollowKeyTimeouts();
 
       composedText = "";
       composedEnglishText = "";
+
       updateTypedOverlay();
       updateEnglishTypedOverlay();
-
       updateWorldSize();
       ensureBackgroundTrack();
+
       moveCameraTo(0, true);
     }
 
@@ -1308,7 +1439,9 @@
         return;
       }
 
-      const newText = currentValue.slice(previousValue.length);
+      const newText =
+        currentValue.slice(previousValue.length);
+
       previousValue = currentValue;
 
       for (const char of newText) {
@@ -1319,9 +1452,9 @@
       previousValue = "";
     });
 
-    imeInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
+    imeInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
 
         typedHistory.push({
           char: "\n",
@@ -1332,48 +1465,62 @@
 
         composedText += "\n";
         composedEnglishText += "\n";
+
         updateTypedOverlay();
         updateEnglishTypedOverlay();
+
         imeInput.value = "";
         previousValue = "";
+
         return;
       }
 
-      if (e.key === "Tab") {
-        e.preventDefault();
+      if (event.key === "Tab") {
+        event.preventDefault();
+
         toggleOverviewMode();
+
         imeInput.value = "";
         previousValue = "";
+
         return;
       }
 
-      if (e.key === "Backspace") {
-        e.preventDefault();
+      if (event.key === "Backspace") {
+        event.preventDefault();
+
         removeLastTile();
+
         imeInput.value = "";
         previousValue = "";
+
         return;
       }
 
-      if (e.key === "Escape") {
-        e.preventDefault();
+      if (event.key === "Escape") {
+        event.preventDefault();
+
         clearAllTiles();
+
         imeInput.value = "";
         previousValue = "";
       }
     });
 
     window.addEventListener("resize", () => {
-      if (resizeRaf) cancelAnimationFrame(resizeRaf);
+      if (resizeRaf) {
+        cancelAnimationFrame(resizeRaf);
+      }
 
       resizeRaf = requestAnimationFrame(() => {
         ensureBackgroundTrack();
 
-        const tiles = [...placedTiles];
-        tiles.forEach(tile => {
+        [...placedTiles].forEach(tile => {
           if (!tile.parentNode) return;
+
           const jamo = tile.dataset.jamo;
           const visual = tile.querySelector("img, .fallback");
+
           if (!visual) return;
 
           if (scatterJamos.has(jamo)) {
@@ -1383,9 +1530,9 @@
 
         updateWorldSize();
 
-        const lastFlowTile = [...placedTiles].reverse().find(
-          tile => !tile.classList.contains("scatter")
-        );
+        const lastFlowTile = [...placedTiles]
+          .reverse()
+          .find(tile => !tile.classList.contains("scatter"));
 
         if (lastFlowTile) {
           lockViewToTile(lastFlowTile, false);
@@ -1405,3 +1552,4 @@
   </script>
 </body>
 </html>
+```
