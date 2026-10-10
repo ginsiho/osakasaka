@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>남</title>
+
+  <style>
+    :root {
+      --page-bg: #111;
+
+      /* 하단 글 영역 설정 */
+      --guide-bg: #111;
+      --guide-color: #f5f5f5;
+      --guide-font-size: 13px;
+      --guide-line-height: 1.9;
+      --guide-padding: 24px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      min-height: 100%;
+      background: var(--page-bg);
+      color: var(--guide-color);
+      font-family:
+        Arial,
+        "Hiragino Kaku Gothic ProN",
+        "Yu Gothic",
+        sans-serif;
+    }
+
+    body {
+      overflow-x: hidden;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    .mobile-page {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      min-height: 100svh;
+    }
+
+    /* 가로 비율로 축소한 작품 화면 */
+    .artwork-window {
+      position: relative;
+      flex: 0 0 auto;
+      width: 100%;
+      overflow: hidden;
+      background: var(--page-bg);
+    }
+
+    .artwork-frame {
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: block;
+      border: 0;
+      background: var(--page-bg);
+      transform-origin: left top;
+    }
+
+    /* 작품 아래 남는 공간 */
+    .guide {
+      flex: 1 0 auto;
+      width: 100%;
+      padding:
+        var(--guide-padding)
+        var(--guide-padding)
+        calc(
+          var(--guide-padding) +
+          env(safe-area-inset-bottom)
+        );
+
+      background: var(--guide-bg);
+      color: var(--guide-color);
+      font-size: var(--guide-font-size);
+      line-height: var(--guide-line-height);
+      overflow-wrap: anywhere;
+    }
+
+    .guide p {
+      margin: 0;
+    }
+
+    .guide p + p {
+      margin-top: 16px;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="mobile-page">
+
+    <!-- 기존 작품 화면 -->
+    <div id="artworkWindow" class="artwork-window">
+      <iframe
+        id="artworkFrame"
+        class="artwork-frame"
+        title="남"
+        allow="autoplay"
+      ></iframe>
+    </div>
+
+    <!-- 이 영역에 원하는 일본어 안내문을 넣으면 돼 -->
+    <section class="guide" lang="ja">
+
+      <!--
+      <p>
+        여기에 안내문을 입력해 주세요.<br />
+        줄바꿈이 필요하면 br 태그를 넣으면 됩니다.
+      </p>
+
+      <p>
+        다음 문단은 새로운 p 태그 안에 넣으면 됩니다.
+      </p>
+      -->
+
+    </section>
+
+  </main>
+
+  <script>
+    const ARTWORK_URL = "./index.html";
+
+    // 모바일에서 유지할 작품 화면의 기준 크기
+    // 1440 × 900 = 16:10
+    const ARTWORK_WIDTH = 1440;
+    const ARTWORK_HEIGHT = 900;
+
+    const artworkWindow =
+      document.getElementById("artworkWindow");
+
+    const artworkFrame =
+      document.getElementById("artworkFrame");
+
+    function resizeArtwork() {
+      const screenWidth = artworkWindow.clientWidth;
+      const scale = screenWidth / ARTWORK_WIDTH;
+
+      artworkFrame.style.width =
+        `${ARTWORK_WIDTH}px`;
+
+      artworkFrame.style.height =
+        `${ARTWORK_HEIGHT}px`;
+
+      artworkFrame.style.transform =
+        `scale(${scale})`;
+
+      artworkWindow.style.height =
+        `${ARTWORK_HEIGHT * scale}px`;
+    }
+
+    window.addEventListener("resize", resizeArtwork);
+
+    resizeArtwork();
+    artworkFrame.src = ARTWORK_URL;
+  </script>
+</body>
+</html>
